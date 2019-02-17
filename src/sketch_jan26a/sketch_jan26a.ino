@@ -17,7 +17,7 @@ void setup(){
 
   // setup for light
   pinMode(7, OUTPUT);
-
+  pinMode(8, OUTPUT);
   
   Serial.begin(9600);
   delay(500);//Delay to let system boot
