@@ -15,6 +15,9 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
  
 void setup(){
 
+  // setup for light
+  pinMode(7, OUTPUT);
+
   
   Serial.begin(9600);
   delay(500);//Delay to let system boot
@@ -38,6 +41,7 @@ void loop(){
     double temperture = get_temperature();
     int light_level = get_light_level();
     int water_level = get_water_level_1();
+    
     lcd.setCursor(0,0);
     lcd.print("TEMP: " + String(temperture));
     lcd.setCursor(0,1);
@@ -46,7 +50,14 @@ void loop(){
     lcd.print("LIGH: " + String(light_level));
     lcd.setCursor(0,3);
     lcd.print("WATR: " + String(water_level));
-    delay(1000);//Wait 5 seconds before accessing sensor again.
+    
+    delay(500);//Wait 5 seconds before accessing sensor again.
+
+    // checking if to turn the light of or on
+    check_if_turn_light(light_level);
+
+    // checking if to start the pump
+    check_if_start_pump(temperture, humiditiy, water_level);
  
   //Fastest should be once every two seconds.
  
@@ -66,4 +77,55 @@ double get_humidity(){
 
 int get_light_level(){
   return analogRead(light_analog);
+}
+
+void shut_light() {
+  digitalWrite(7, HIGH);
+}
+
+void turn_light() {
+  digitalWrite(7, LOW);
+}
+
+void start_pump() {
+  digitalWrite(8, LOW);
+  delay(3000);
+  stop_pump();
+}
+
+void stop_pump() {
+  digitalWrite(8, HIGH);
+}
+
+void check_if_turn_light(int light, double temperture) {
+  
+  // darkness
+  if (light > 700) {
+    turn_light();
+  }
+
+  // too much light -> turn off lamp
+  if (light <= 100) {
+    shut_light();
+  }
+
+  // temperture low -> turn on lamp
+  if (temperture < 15.0) {
+    turn_light();
+  }
+}
+
+void check_if_start_pump(double temperture, double humiditiy, int water_level) {
+
+  // check when to start pump
+  if (temperture >= 30.0 && humiditiy < 50.0) {
+    start_pump();
+  }
+
+  // check when to stop pump
+  if (temperture <= 20.0 && humiditiy >= 30.0 && humiditiy <= 50.0) {
+    stop_pump();
+  }
+
+  
 }
