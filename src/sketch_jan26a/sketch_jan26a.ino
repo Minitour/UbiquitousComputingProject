@@ -9,6 +9,12 @@
 #define water_level_1 A2
 int backlight_pin10 = 10;
 int brightness = 255;
+
+int limit_watering = 3;
+int current_watering = 0;
+
+// demo mode -> 1, real mode -> 0
+int demo = 1;
  
 dht DHT;
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
@@ -18,6 +24,7 @@ void setup(){
   // setup for light
   pinMode(7, OUTPUT);
   pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
   
   Serial.begin(9600);
   delay(500);//Delay to let system boot
@@ -54,10 +61,13 @@ void loop(){
     delay(500);//Wait 5 seconds before accessing sensor again.
 
     // checking if to turn the light of or on
-    check_if_turn_light(light_level);
+    check_if_turn_light(light_level, temperture);
 
     // checking if to start the pump
     check_if_start_pump(temperture, humiditiy, water_level);
+
+    // activate fan
+    check_if_start_fan(temperture);
  
   //Fastest should be once every two seconds.
  
@@ -88,13 +98,24 @@ void turn_light() {
 }
 
 void start_pump() {
-  digitalWrite(8, LOW);
-  delay(3000);
-  stop_pump();
+  if (current_watering < limit_watering) {
+     digitalWrite(8, LOW);
+     delay(3000);
+     stop_pump();
+     current_watering += 1;
+  }
 }
 
 void stop_pump() {
   digitalWrite(8, HIGH);
+}
+
+void start_fan() {
+  digitalWrite(9, LOW);
+}
+
+void stop_fan() {
+  digitalWrite(9, HIGH);
 }
 
 void check_if_turn_light(int light, double temperture) {
@@ -105,7 +126,7 @@ void check_if_turn_light(int light, double temperture) {
   }
 
   // too much light -> turn off lamp
-  if (light <= 100) {
+  if (light <= 200) {
     shut_light();
   }
 
@@ -117,15 +138,49 @@ void check_if_turn_light(int light, double temperture) {
 
 void check_if_start_pump(double temperture, double humiditiy, int water_level) {
 
-  // check when to start pump
-  if (temperture >= 30.0 && humiditiy < 50.0) {
-    start_pump();
+  if (demo == 1) {
+    if (temperture > 23.0) {
+      start_pump();
+    }
+
+    if (temperture <= 23.0) {
+      stop_pump();
+    }
+    
+  } else {
+      // check when to start pump
+    if (temperture > 23.0 && humiditiy < 50.0) {
+      start_pump();
+    }
+
+    // check when to stop pump
+    if (temperture <= 23.0 && humiditiy >= 30.0 && humiditiy <= 50.0) {
+      stop_pump();
+    } 
   }
 
-  // check when to stop pump
-  if (temperture <= 20.0 && humiditiy >= 30.0 && humiditiy <= 50.0) {
-    stop_pump();
-  }
+}
 
+void check_if_start_fan(double temperture) {
   
+  if (demo == 1) {
+      if (temperture >= 27.0) {
+        start_fan();
+      }
+      
+      if (temperture < 27.0) {
+        stop_fan();
+      }
+      
+  } else {
+      if (temperture >= 32.0) {
+        start_fan();
+      }
+
+      if (temperture < 32.0) {
+        stop_fan();
+      }
+  }
+  
+
 }
